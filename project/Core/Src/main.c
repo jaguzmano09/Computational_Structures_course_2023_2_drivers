@@ -197,10 +197,10 @@ int main(void)
   ring_buffer_init(&ring_buffer_uart_rx, rx_buffer, 16);
   HAL_UART_Receive_IT(&huart2, &rx_data, 1);
 
-  //ssd1306_Init();
-  //ssd1306_Fill(White);
-  //ssd1306_WriteString("Hello word ",Font_7x10,Black);
-  //ssd1306_UpdateScreen();
+  ssd1306_Init();
+  ssd1306_Fill(White);
+  ssd1306_WriteString("Hello word ",Font_7x10,Black);
+  ssd1306_UpdateScreen();
   /* USER CODE END 2 */
 
   /* Infinite loop */

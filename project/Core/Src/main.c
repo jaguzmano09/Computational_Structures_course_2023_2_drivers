@@ -197,15 +197,34 @@ int main(void)
   ring_buffer_init(&ring_buffer_uart_rx, rx_buffer, 16);
   HAL_UART_Receive_IT(&huart2, &rx_data, 1);
 
-  //ssd1306_Init();
-  //ssd1306_Fill(White);
-  //ssd1306_WriteString("Hello word ",Font_7x10,Black);
-  //ssd1306_UpdateScreen();
+/* Initialize configured driver SSD1306*/
+
+ /*
+  * @brief Initialises the SSD1306 controller.
+  **/
+  ssd1306_Init();
+  /**
+   * @brief Fills the entire screen with a specified colour.
+   * @param Color: Color to fill the screen
+  */
+  ssd1306_Fill(White);
+  /**
+   * @brief Writes a text string to the screen.
+   * @param Text: The text string to be displayed on the screen.
+   * @param Font: The font or typeface to use.
+   * @param Colour: The colour of the text (e.g. Black or White).
+  */
+  ssd1306_WriteString("Hello word ",Font_7x10,Black);
+  /**
+   * @brief Updates the screen content to reflect the changes.
+  */
+  ssd1306_UpdateScreen();
   /* USER CODE END 2 */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
 
+  /* Infinite loop */
+
+  /* USER CODE BEGIN WHILE */
   while (1)
   {
 	  if (key_event != 0xFF) { // check if there is a event from the EXTi callback

@@ -22,11 +22,16 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
+
+/*Include library ring_buffer*/
 #include"ring_buffer.h"
 
-// Include library ssd1306
+/*Include librarys ssd1306*/
 #include "ssd1306.h"
 #include "ssd1306_fonts.h"
+
+/*Include Library keyboard hexadecimal*/
+#include "keyboard.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,11 +55,13 @@ I2C_HandleTypeDef hi2c1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-uint8_t rx_buffer[16];
-ring_buffer_t ring_buffer_uart_rx;
 
-uint8_t rx_data;
-uint16_t key_event=0xFF;
+// Defined the variables for the use of the keyboard hexadecimal
+uint16_t key_event=0xFF;//Define the variable for the column reader to be evaluated
+uint8_t key_pressed=0xFF;// Define the variable for reader of the key pressed
+
+
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -68,97 +75,33 @@ static void MX_I2C1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+/**
+ * @brief Overrides the standard _write function to redirect output to UART.
+ * @param file File descriptor (not used).
+ * @param ptr Pointer to the character buffer to be transmitted.
+ * @param len Number of bytes to transmit.
+ * @return The number of bytes transmitted.
+ */
 int _write(int file, char *ptr, int len)
 {
 	HAL_UART_Transmit(&huart2, (uint8_t*)ptr, len, HAL_MAX_DELAY);
 	return len;
 }
+/**
+ * @brief Callback function for GPIO EXTI (External Interrupt) events.
+ * @param GPIO_Pin The GPIO_Pin that triggered the interrupt.
+ */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-
 {
-	key_event=GPIO_Pin;
-}
-void keypad_init(void)
-{
-	/* Set the rows high to be detected in the columns by rising interrupt */
-	ROW_1_GPIO_Port->BSRR = ROW_1_Pin;
-	ROW_2_GPIO_Port->BSRR = ROW_2_Pin;
-	ROW_3_GPIO_Port->BSRR = ROW_3_Pin;
-	ROW_4_GPIO_Port->BSRR = ROW_4_Pin;
+	key_event = GPIO_Pin;
 }
 
 /**
- * @brief  This function debounces and identify keypad events.
- * @param  column_to_evaluate: the column where the event happened.
- * @retval 0xFF -> invalid key. [0x00 - 0x0F] -> valid key.
+* @brief Callback function for UART receive complete event.
+* @param huart Pointer to the UART handle that triggered the receive complete event.
 */
 
-uint8_t keypad_handler(uint16_t column_to_evaluate)
-{
-	uint8_t key_pressed = 0xFF; // Value to return
-
-	/*** Debounce the key press (remove noise in the key) ***/
-#define KEY_DEBOUNCE_MS 300 /*!> Minimum time required for since last press */
-	static uint32_t last_pressed_tick = 0;
-	if (HAL_GetTick() <= (last_pressed_tick + KEY_DEBOUNCE_MS)) {
-		// less than KEY_DEBOUNCE_MS since last press. Probably noise
-		return key_pressed; // return 0xFF
-	}
-	last_pressed_tick = HAL_GetTick();
-
-	/*** Check in which column the event happened ***/
-	switch (column_to_evaluate) {
-	case COLUMN_1_Pin:
-		ROW_1_GPIO_Port->BSRR = ROW_1_Pin; // turn on row 1
-		ROW_2_GPIO_Port->BRR = ROW_2_Pin;  // turn off row 2
-		ROW_3_GPIO_Port->BRR = ROW_3_Pin;  // turn off row 3
-		ROW_4_GPIO_Port->BRR = ROW_4_Pin;  // turn off row 4
-
-
-		if (COLUMN_1_GPIO_Port->IDR & COLUMN_1_Pin) {
-			key_pressed = 0x01; // if column 1 is still high -> column 1 + row 1 = key 1
-			break;
-
-		}
-		ROW_1_GPIO_Port->BRR = ROW_1_Pin; 	// turn off row 1
-		ROW_2_GPIO_Port->BSRR = ROW_2_Pin; 	// turn on row 2
-
-		if (COLUMN_1_GPIO_Port->IDR & COLUMN_1_Pin) {
-			key_pressed = 0x04; // if column 1 is still high -> column 1 + row 2 = key 4
-			break;
-		}
-		ROW_2_GPIO_Port->BRR = ROW_2_Pin; 	// turn off row 2
-		ROW_3_GPIO_Port->BSRR = ROW_3_Pin; 	// turn on row 3
-
-		if (COLUMN_1_GPIO_Port->IDR & COLUMN_1_Pin) {
-			key_pressed = 0x07; // if column 1 is still high -> column 1 + row 3 = key 7
-			break;
-
-		}
-		ROW_3_GPIO_Port->BRR = ROW_3_Pin;	// turn off row 3
-		ROW_4_GPIO_Port->BSRR = ROW_4_Pin; 	// turn on row 4
-
-		if (COLUMN_1_GPIO_Port->IDR & COLUMN_1_Pin) {
-			key_pressed = 0x0E; // if column 1 is still high -> column 1 + row 4 = key *
-			break;
-		}
-	  break;
-
-	case COLUMN_2_Pin:
-		/*!\ TODO: Implement validation for column 2 here */
-		break;
-
-	/*!\ TODO: Implement other column cases here */
-
-	default:
-		/* This should not be reached */
-		printf("Unknown column: %x\r\n", column_to_evaluate);
-	  break;
-	}
-
-	keypad_init(); // set the columns high again
-	return key_pressed; // invalid: 0xFF, valid:[0x00-0x0F]
-}
 
 /* USER CODE END 0 */
 
@@ -192,53 +135,34 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   MX_I2C1_Init();
-  keypad_init();
   /* USER CODE BEGIN 2 */
-  ring_buffer_init(&ring_buffer_uart_rx, rx_buffer, 16);
-  HAL_UART_Receive_IT(&huart2, &rx_data, 1);
+
 
 /* Initialize configured driver SSD1306*/
-
- /*
-  * @brief Initialises the SSD1306 controller.
-  **/
-  ssd1306_Init();
-  /**
-   * @brief Fills the entire screen with a specified colour.
-   * @param Color: Color to fill the screen
-  */
-  ssd1306_Fill(White);
-  /**
-   * @brief Writes a text string to the screen.
-   * @param Text: The text string to be displayed on the screen.
-   * @param Font: The font or typeface to use.
-   * @param Colour: The colour of the text (e.g. Black or White).
-  */
-  ssd1306_WriteString("Hello word ",Font_7x10,Black);
-  /**
-   * @brief Updates the screen content to reflect the changes.
-  */
-  ssd1306_UpdateScreen();
+/*
+ * @brief Initialises the SSD1306 controller.
+ **/
+ ssd1306_Init();
   /* USER CODE END 2 */
 
+/* Initialize configured keyboard hexadecimal*/
+  keypad_init();
+ /* Infinite loop */
+ /* USER CODE BEGIN WHILE */
 
-  /* Infinite loop */
-
-  /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  if (key_event != 0xFF) { // check if there is a event from the EXTi callback
+	  if (key_event != 0xFF)
+	  { // check if there is a event from the EXTi callback
 		  uint16_t key_pressed = keypad_handler(key_event); // call the keypad handler
-		  printf("Key pressed: %x\r\n", key_pressed); // print the key pressed
+		  printf("\r\nKey pressed: %x\r\n", key_pressed); // print the key pressed
 		  key_event = 0xFF; // clean the event
-	 }
-
-
+	  	 }
 
   }
   /* USER CODE END WHILE */
-
 }
+
 
 /**
   * @brief System Clock Configuration

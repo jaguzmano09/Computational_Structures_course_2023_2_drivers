@@ -2,7 +2,7 @@
  * ring_buffer.h
  *
  *  Created on: Oct 23, 2023
- *      Author: juang
+ *      Author: Javier Guzmán
  */
 
 #ifndef INC_RING_BUFFER_H_
@@ -35,6 +35,8 @@ uint8_t ring_buffer_get(ring_buffer_t *ring_buffer, uint8_t *data);
 uint8_t ring_buffer_size(ring_buffer_t *ring_buffer);
 
 uint8_t ring_buffer_empty(ring_buffer_t *ring_buffer);
+
+uint8_t ring_buffer_is_full(ring_buffer_t *ring_buffer);
 
 uint8_t ring_buffer_reset(ring_buffer_t *ring_buffer);
 

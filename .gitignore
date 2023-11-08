@@ -32,3 +32,8 @@ project/Debug/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart_ex.o
 project/Debug/Drivers/STM32L4xx_HAL_Driver/Src/subdir.mk
 project/Debug/makefile
 project/Debug/sources.mk
+*.elf
+project/Debug/computational_structures_drivers.elf
+project/Debug/Core/Src/main.d
+project/Debug/Core/Src/main.o
+project/Debug/Core/Src/main.o

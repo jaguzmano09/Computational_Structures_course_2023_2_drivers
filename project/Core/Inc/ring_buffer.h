@@ -36,6 +36,8 @@ uint8_t ring_buffer_size(ring_buffer_t *ring_buffer);
 
 uint8_t ring_buffer_empty(ring_buffer_t *ring_buffer);
 
+uint8_t ring_buffer_is_full(ring_buffer_t *ring_buffer);
+
 uint8_t ring_buffer_reset(ring_buffer_t *ring_buffer);
 
 

@@ -56,6 +56,13 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 
+//Defined the size of the sequence
+#define KEY_BUFFER_SIZE 5
+
+//Define the variables for the use of the ring_buffer
+uint8_t key_buffer_data[KEY_BUFFER_SIZE];//Define the data reader
+ring_buffer_t key_buffer;////Define the buffer where the data will be stored.
+
 // Defined the variables for the use of the keyboard hexadecimal
 uint16_t key_event=0xFF;//Define the variable for the column reader to be evaluated
 uint8_t key_pressed=0xFF;// Define the variable for reader of the key pressed
@@ -101,7 +108,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 * @brief Callback function for UART receive complete event.
 * @param huart Pointer to the UART handle that triggered the receive complete event.
 */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 
+	ring_buffer_put(&key_buffer, key_pressed);
+
+	HAL_UART_Receive_IT(&huart2, &key_pressed,1);
+}
 
 /* USER CODE END 0 */
 
@@ -137,28 +149,75 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
+ /*Initialise the ring_buffer*/
+  ring_buffer_init(&key_buffer, key_buffer_data, KEY_BUFFER_SIZE);
 
 /* Initialize configured driver SSD1306*/
 /*
- * @brief Initialises the SSD1306 controller.
+ * @brief Initializes the SSD1306 controller.
  **/
  ssd1306_Init();
-  /* USER CODE END 2 */
+
 
 /* Initialize configured keyboard hexadecimal*/
   keypad_init();
- /* Infinite loop */
- /* USER CODE BEGIN WHILE */
 
+/* USER CODE END 2 */
+
+
+/* Infinite loop */
+/* USER CODE BEGIN WHILE */
   while (1)
   {
 	  if (key_event != 0xFF)
 	  { // check if there is a event from the EXTi callback
 		  uint16_t key_pressed = keypad_handler(key_event); // call the keypad handler
 		  printf("\r\nKey pressed: %x\r\n", key_pressed); // print the key pressed
-		  key_event = 0xFF; // clean the event
-	  	 }
+		  ring_buffer_put(&key_buffer, key_pressed);
 
+		  	  /**Check if the key pressed corresponds to (*)**/
+		  		  if(key_pressed==0x0E)
+		  		  {
+		  			  //If this is met, the buffer is reset, i.e. the sequence
+		  		  		ring_buffer_reset(&key_buffer);
+		  		  		//Notify with an alert message the action taken.
+		  		  		printf("You pressed(*)");
+		  		  		printf("\r\nThe sequence has been restarted\r\n");
+		  		  }
+
+
+		  /**Check if the buffer or sequence is full**/
+		  	if (ring_buffer_is_full(&key_buffer)==1)
+		  	{//If this is fulfilled, we notify with a printed message .
+		  		printf("\r\nYa presionaste 5 teclas\r\n");
+
+		  	/*As long as the sequence has not been completed, the following is carried out*/
+
+
+		  		//Check if the sequence entered complies with the year of birth followed by #.
+		  		//(2,0,0,0,4,#)
+		  		if (key_buffer_data[0]==0x02 && key_buffer_data[1]==0x00 && key_buffer_data[2]==0x00 &&key_buffer_data[3]==0x04 && key_buffer_data[4]==0x23 )
+		  		  {
+		  			//If this is fulfilled, a message "pass" is shown on the display
+		  			//and the corresponding action is printed.
+		  		            	  ssd1306_Fill(Black);
+		  		            	  ssd1306_WriteString("Pass",Font_7x10,White);
+		  		            	  printf("\r\nCorrect key\r\n");
+
+		  		  }
+		  		  	  else{
+		  		  		  //If this is not fulfilled, we show a message on the display "Fail".
+		  		  		  //and print the corresponding action.
+		  		            	  ssd1306_Fill(Black);
+		  		            	  ssd1306_WriteString("Fail",Font_7x10,White);
+		  		            	  printf("\r\nIncorrect key\r\n");
+		  		            	printf("\r\nPress (*) and try again\r\n");
+
+		  		  	  	  }
+		  }
+		  	key_event = 0xFF; // clean the event
+
+	  }
   }
   /* USER CODE END WHILE */
 }

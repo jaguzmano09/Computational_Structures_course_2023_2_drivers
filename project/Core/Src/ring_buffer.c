@@ -64,7 +64,12 @@ uint8_t ring_buffer_size(ring_buffer_t *ring_buffer){
 uint8_t ring_buffer_empty(ring_buffer_t *ring_buffer){
 	return ((ring_buffer->is_full == 0 )&& (ring_buffer->head == ring_buffer->tail));
 }
-
+/**
+ * @brief This function checks if the buffer ring is full
+*/
+uint8_t ring_buffer_is_full(ring_buffer_t *ring_buffer){
+	return ((ring_buffer->is_full == 1 )&& (ring_buffer->head == ring_buffer->tail));
+}
 /**
  * @brief This function reset the ring buffer
 */
